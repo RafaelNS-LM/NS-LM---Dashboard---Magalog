@@ -120,6 +120,19 @@ table.xt tr:nth-child(even) td{background:#D9E1F2}
 table.xt tr:hover td{background:#FFF2CC}
 table.xt th.rc{text-align:center}
 table.xt td.rc,table.xt tr:nth-child(even) td.rc,table.xt tr:hover td.rc{background:#FFBE02!important;color:#1A1A1A!important;font-weight:800;text-align:center;border-bottom:1px solid #D9A200}
+
+/* painel EM ROTA (cidade > motorista) ao lado do card por cidade */
+.route-summary-layout #route-city-visual{max-width:none!important}
+.er-grid{display:grid;grid-template-columns:minmax(380px,1fr) minmax(320px,640px);gap:12px;align-items:start}
+@media(max-width:1000px){.er-grid{grid-template-columns:1fr}}
+.er-card>.route-city-title{font-size:14px;letter-spacing:.3px}.er-card>.route-city-title span{font-size:11.5px;letter-spacing:0}.er-grid>.er-card{order:-1}.er-list{max-height:330px;overflow:auto;padding-right:4px}
+.er-city{display:grid;grid-template-columns:1fr auto 36px;gap:8px;align-items:center;font-size:12px;font-weight:800;color:#fff;background:#305496;border-radius:6px;padding:5px 8px;margin:8px 0 4px;position:sticky;top:0;z-index:1}
+.er-city:first-child{margin-top:0}.er-city small{font-weight:600;opacity:.85}.er-city b{text-align:right}
+.er-row{display:grid;grid-template-columns:minmax(190px,1.4fr) minmax(70px,1fr) 30px;gap:8px;align-items:center;font-size:11.5px;padding:3px 8px;border-radius:6px;cursor:pointer}
+.er-row>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.er-row>b{text-align:right;color:var(--tx)}
+.er-row:hover{background:var(--bg)}
+.er-row.sel{background:#FFF2CC;color:#1A1A1A}.er-row.sel>b{color:#1A1A1A}.er-row.sel .route-city-track i{background:#FFBE02}
 </style></head><body><div class="w">
 <div class="hd"><div><h1>Dashboard NS – Last Mile</h1><div class="sub" id="meta">Nenhuma base carregada</div></div><button id="th"></button></div>
 <div id="drop"><b>Arraste o relatório de entregas aqui</b> ou clique para escolher<div class="sub">Aceita .xlsx, .xls e .csv (separador ;)</div>
@@ -132,6 +145,22 @@ table.xt td.rc,table.xt tr:nth-child(even) td.rc,table.xt tr:hover td.rc{backgro
 <div id="nd" style="margin-top:10px"></div>
 <h2>Desconsiderados <span class="sub">Em rota e liberados para entrega recebidos hoje ou sem data</span></h2>
 <div class="card" id="disregarded"></div>
+<h2>Pedidos em rota por motorista</h2>
+<div class="row tabs" id="tabs" style="margin-top:0"></div>
+<div class="row" style="margin-top:8px"><span class="sub">Motorista(s)</span><span id="rfw"></span><button class="rb" id="rfb" data-rf="1" disabled>Filtro</button><button class="p" data-ex="rota">Exportar Excel</button></div>
+<div class="route-summary-layout"><div class="sub" style="margin-top:8px" id="rsum"></div><div id="route-city-visual"></div></div>
+<div style="margin-top:10px" id="drv"></div>
+<h2>Insucessos <span class="sub">status Pendente + motivo de insucesso (Últ. Pendência) · dentro da base do NS · clique nos cards para ver os pedidos</span></h2>
+<div class="grid k" id="kpi"></div>
+<div class="row"><button class="p" data-ex="ins">Exportar insucessos (filtro atual)</button></div>
+<div id="kd" style="margin-top:10px"></div>
+
+<div class="grid" style="margin-top:10px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
+<div class="card"><div class="l sub">Tipo de insucesso · % sobre a base do NS</div><div class="st" style="margin-bottom:8px"><span>clique para filtrar motoristas e a lista</span></div><div id="tp" class="sc"></div></div>
+<div class="card"><div class="l sub">Insucessos por motorista</div><div class="st" style="margin-bottom:8px"><span>clique para filtrar o gráfico por hora</span></div><div id="dv" class="sc"></div></div>
+</div>
+
+
 <h2>Histórico de atualização <span class="sub">consolidado: situação atual por unidade, histórico das cargas e variação do NS em %</span></h2>
 <div class="card" id="ev"></div>
 
@@ -145,25 +174,10 @@ table.xt td.rc,table.xt tr:nth-child(even) td.rc,table.xt tr:hover td.rc{backgro
 <div class="row" style="margin-top:0"><label class="sub">Ignorar pausas acima de <select id="gl"><option>30</option><option>60</option><option selected>90</option><option>120</option><option>180</option></select> min</label><label class="sub"><input type="checkbox" id="g0"> ignorar intervalos de 0 min</label><button class="p" data-ex="gap">Exportar Excel</button><button data-gap-reset="1">Limpar filtros</button></div>
 <div class="card" style="margin-top:10px" id="gp"></div>
 
-<h2>Insucessos <span class="sub">status Pendente + motivo de insucesso (Últ. Pendência) · dentro da base do NS · clique nos cards para ver os pedidos</span></h2>
-<div class="grid k" id="kpi"></div>
-<div class="row"><button class="p" data-ex="ins">Exportar insucessos (filtro atual)</button></div>
-<div id="kd" style="margin-top:10px"></div>
-
-<div class="grid" style="margin-top:10px;grid-template-columns:repeat(auto-fit,minmax(340px,1fr))">
-<div class="card"><div class="l sub">Tipo de insucesso · % sobre a base do NS</div><div class="st" style="margin-bottom:8px"><span>clique para filtrar motoristas e a lista</span></div><div id="tp" class="sc"></div></div>
-<div class="card"><div class="l sub">Insucessos por motorista</div><div class="st" style="margin-bottom:8px"><span>clique para filtrar o gráfico por hora</span></div><div id="dv" class="sc"></div></div>
-</div>
-
 <h2>Outras ocorrências <span class="sub">demais Últ. Pendência que não são insucesso · só para visão</span></h2>
 <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(340px,1fr))"><div class="card"><div class="l sub">Por motivo (Últ. Pendência) · clique para ver os pedidos</div><div id="ot" class="sc" style="margin-top:8px"></div></div><div class="card"><div class="l sub">Por status</div><div id="os" class="sc" style="margin-top:8px"></div></div></div>
 <div id="od" style="margin-top:10px"></div>
 
-<h2>Pedidos em rota por motorista</h2>
-<div class="row tabs" id="tabs" style="margin-top:0"></div>
-<div class="row" style="margin-top:8px"><span class="sub">Motorista(s)</span><span id="rfw"></span><button class="rb" id="rfb" data-rf="1" disabled>Filtro</button><button class="p" data-ex="rota">Exportar Excel</button></div>
-<div class="route-summary-layout"><div class="sub" style="margin-top:8px" id="rsum"></div><div id="route-city-visual"></div></div>
-<div style="margin-top:10px" id="drv"></div>
 </div></div>
 <script>
 const CL={TODAS:['#1f48f3','#ffffff'],GYN:['#00858f','#ffffff'],ANP:['#074f56','#ffffff']};
@@ -345,7 +359,7 @@ function msSync(){
 function rUpd(){
  const was=S.rf;if(S.rf&&!S.rm.length)S.rf=false;
  if(was){renderRota();return}
- document.querySelectorAll('#drv details').forEach(el=>el.classList.toggle('sel',S.rm.includes(el.dataset.n)));
+ document.querySelectorAll('#drv details').forEach(el=>el.classList.toggle('sel',S.rm.includes(el.dataset.n)));document.querySelectorAll('.er-row[data-rm]').forEach(el=>el.classList.toggle('sel',S.rm.includes(el.dataset.rm)));
  const rb=$('rfb');rb.disabled=!S.rm.length;rb.textContent='Filtro';rb.classList.remove('a');
  $('rsum').textContent=$('rsum').textContent.replace(/ · (selecione um ou mais motoristas para habilitar o filtro)?$/,'')+(S.rm.length?'':' · selecione um ou mais motoristas para habilitar o filtro');
  msSync();
@@ -491,7 +505,10 @@ function renderRota(){
      const dueCity=c=>{const k=norm(c);return ({'GOIANIA':'D+1','APARECIDA DE GOIANIA':'D+1','SENADOR CANEDO':'D+2','TRINDADE':'D+1','ANAPOLIS':'D+2','HIDROLANDIA':'D+3','GOIANAPOLIS':'D+3','ABADIA DE GOIAS':'D+3','VIANOPOLIS':'CEP não atendido'})[k]||'Prazo não mapeado'};
      const cityCounts={};ds.flatMap(([,list])=>list).forEach(r=>{const city=String(r['Cidade Pessoa Visita']||'Cidade não informada').trim()||'Cidade não informada';const k=norm(city);if(!cityCounts[k])cityCounts[k]={city,n:0,due:dueCity(city)};cityCounts[k].n++});
      const cityRows=Object.values(cityCounts).sort((a,b)=>b.n-a.n||a.city.localeCompare(b.city,'pt-BR')),cityMax=Math.max(1,...cityRows.map(x=>x.n));
-     $('route-city-visual').innerHTML=`<div class="route-city-card"><div class="route-city-title">Pedidos em rota por cidade <span>· vencimento NS</span></div>${cityRows.length?cityRows.map(x=>`<div class="route-city-row"><div class="route-city-label"><span>${esc(x.city)}</span><small>${esc(x.due)}</small></div><div class="route-city-track"><i style="width:${(x.n/cityMax*100).toFixed(1)}%"></i></div><b>${x.n}</b></div>`).join(''):'<div class="sub">Sem pedidos em rota.</div>'}</div>`;
+     const byCity={};ds.forEach(([drv,list])=>list.forEach(r=>{const city=String(r['Cidade Pessoa Visita']||'Cidade não informada').trim()||'Cidade não informada',ck=norm(city);if(!byCity[ck])byCity[ck]={city,n:0,due:dueCity(city),d:{}};byCity[ck].n++;byCity[ck].d[drv]=(byCity[ck].d[drv]||0)+1}));
+     const erC=Object.values(byCity).sort((a,b)=>b.n-a.n||a.city.localeCompare(b.city,'pt-BR')),erMax=Math.max(1,...erC.flatMap(c=>Object.values(c.d)));
+     const emRota=`<div class="route-city-card er-card"><div class="route-city-title">EM ROTA <span>· entregas por cidade e motorista · clique no motorista para selecionar</span></div><div class="er-list">${erC.length?erC.map(c=>`<div class="er-city"><span>${esc(c.city)}</span><small>${esc(c.due)}</small><b>${c.n}</b></div>${Object.entries(c.d).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'pt-BR')).map(([m,q])=>`<div class="er-row ${S.rm.includes(m)?'sel':''}" data-rm="${esc(m)}" title="${esc(m)} · ${q} entrega(s) em ${esc(c.city)}"><span>${esc(m)}</span><div class="route-city-track"><i style="width:${(q/erMax*100).toFixed(1)}%"></i></div><b>${q}</b></div>`).join('')}`).join(''):'<div class="sub">Sem pedidos em rota.</div>'}</div></div>`;
+     $('route-city-visual').innerHTML=`<div class="er-grid"><div class="route-city-card"><div class="route-city-title">Pedidos em rota por cidade <span>· vencimento NS</span></div>${cityRows.length?cityRows.map(x=>`<div class="route-city-row"><div class="route-city-label"><span>${esc(x.city)}</span><small>${esc(x.due)}</small></div><div class="route-city-track"><i style="width:${(x.n/cityMax*100).toFixed(1)}%"></i></div><b>${x.n}</b></div>`).join(''):'<div class="sub">Sem pedidos em rota.</div>'}</div>${emRota}</div>`;
  $('drv').innerHTML=ds.map(([k,l],i)=>{
   l.sort((a,b)=>(a[COLS[0]]+a[COLS[2]]+a[COLS[3]]).localeCompare(b[COLS[0]]+b[COLS[2]]+b[COLS[3]],'pt'));
   return `<details data-n="${esc(k)}" class="${S.rm.includes(k)?'sel':''}" ${fl?'open':''}><summary data-rm="${esc(k)}"><span>${esc(k)}</span><span>${l.length} pedido(s)</span></summary>
