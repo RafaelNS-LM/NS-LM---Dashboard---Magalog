@@ -133,6 +133,14 @@ table.xt td.rc,table.xt tr:nth-child(even) td.rc,table.xt tr:hover td.rc{backgro
 .er-row>b{text-align:right;color:var(--tx)}
 .er-row:hover{background:var(--bg)}
 .er-row.sel{background:#FFF2CC;color:#1A1A1A}.er-row.sel>b{color:#1A1A1A}.er-row.sel .route-city-track i{background:#FFBE02}
+
+.des-orders tr.des-ext td{background:#FFD966!important;color:#1A1A1A!important}
+.des-ext-note{display:flex;align-items:center;gap:8px;margin:10px 0 2px;padding:8px 12px;border-radius:8px;background:#FFF2CC;color:#3B2F00;font-size:12.5px;border:1px solid #FFD966}
+.des-ext-dot{width:12px;height:12px;border-radius:3px;background:#FFD966;border:1px solid #D9A200;flex:none}
+
+.des-orders thead th{background:#3259FB!important;color:#fff!important;cursor:pointer;user-select:none;white-space:nowrap}
+.des-orders thead th:hover{background:#1f45e6!important}
+.des-orders thead th .dsa{opacity:.85;font-size:11px;margin-left:2px}
 </style></head><body><div class="w">
 <div class="hd"><div><h1>Dashboard NS – Last Mile</h1><div class="sub" id="meta">Nenhuma base carregada</div></div><button id="th"></button></div>
 <div id="drop"><b>Arraste o relatório de entregas aqui</b> ou clique para escolher<div class="sub">Aceita .xlsx, .xls e .csv (separador ;)</div>
@@ -143,7 +151,7 @@ table.xt td.rc,table.xt tr:nth-child(even) td.rc,table.xt tr:hover td.rc{backgro
 <h2>NS</h2>
 <div class="grid" id="ns"></div>
 <div id="nd" style="margin-top:10px"></div>
-<h2>Desconsiderados <span class="sub">Em rota e liberados para entrega recebidos hoje ou sem data</span></h2>
+<h2>Desconsiderados <span class="sub">Em rota e liberados para entrega recebidos hoje, sem data ou dentro do prazo da cidade (D+2/D+3)</span></h2>
 <div class="card" id="disregarded"></div>
 <h2>Pedidos em rota por motorista</h2>
 <div class="row tabs" id="tabs" style="margin-top:0"></div>
@@ -231,7 +239,7 @@ async function xl(name,head,data){
     const XCOLS=NEED.filter(c=>c!=='Ult. Motorista').concat(['Ult. Motorista']);
 const xv=v=>v instanceof Date?v:(v&&typeof v==='object'?'':clean(v));
 function exportBy(k){
- if(k==='des'){const E=(window._ex||{}).des;if(E)return xl(E.t,['Nro. Entrega','Tipo de Serviço','Dt. Recebimento Unidade Entrega','Cidade Pessoa Visita','Status','PRAZO'],E.rows);return}
+ if(k==='des'){const E=(window._ex||{}).des;if(E)return xl(E.t,['Nro. Entrega','Tipo de Serviço','Dt. Recebimento Unidade Entrega','Cidade Pessoa Visita','Status','PRAZO','Motivo'],E.rows);return}
  const E=(window._ex||{})[k];
  if(k==='ins'){const l=rows.filter(r=>r.I&&unitOK(r)&&(!S.t||r.P===S.t)&&inM(r));return xl('Insucessos'+(S.u!=='TODAS'?'_'+S.u:'')+(S.t?'_'+S.t:'')+mt(),LH,l.map(lr))}
  if(!E)return;
@@ -274,18 +282,26 @@ function init(name,t){
 function upd(full){renderNS();renderND();renderDisregarded();renderChips();renderChart();renderGap();renderInc();if(full)renderRota();msSync()}
 function renderDisregarded(){
      const today=todayDMY(),allowed=new Set(['LIBERADO PARA ENTREGA','EM ROTA']);
-     const list=rows.filter(r=>allowed.has(r.S)&&(r.RD===today||!r.RD));
+     const PRZ={'SENADOR CANEDO':2,'ANAPOLIS':2,'HIDROLANDIA':3,'ABADIA DE GOIAS':3,'GOIANAPOLIS':3};
+     const dnum=d=>{const m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d||'');return m?Date.UTC(+m[3],+m[2]-1,+m[1])/864e5:null};
+     const t0=dnum(today),ext=r=>{const n=PRZ[norm(r['Cidade Pessoa Visita'])],d=dnum(r.RD);if(!n||d==null)return false;const ago=t0-d;return ago>=1&&ago<n};
+     const list=rows.filter(r=>allowed.has(r.S)&&(r.RD===today||!r.RD||ext(r)));
+     const extN=list.filter(ext).length;
      const units=[...new Set(list.map(r=>r.U||'(sem unidade)'))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
      const filter=window._desFilter||(window._desFilter={unit:'',status:''});
      const subset=(u,st)=>list.filter(r=>(!u||(r.U||'(sem unidade)')===u)&&(!st||st==='ALL'||r.S===st));
      const route=list.filter(r=>r.S==='EM ROTA').length,lib=list.filter(r=>r.S==='LIBERADO PARA ENTREGA').length;
      const unitRows=units.map(u=>`<tr><td><button class="des-link" data-des-unit="${esc(u)}" data-des-status="ALL">${esc(u)}</button></td><td class="center"><button class="des-link" data-des-unit="${esc(u)}" data-des-status="EM ROTA">${subset(u,'EM ROTA').length}</button></td><td class="center"><button class="des-link" data-des-unit="${esc(u)}" data-des-status="LIBERADO PARA ENTREGA">${subset(u,'LIBERADO PARA ENTREGA').length}</button></td><td class="center"><button class="des-link" data-des-unit="${esc(u)}" data-des-status="ALL">${subset(u,'ALL').length}</button></td></tr>`).join('');
      const prazoCidade=c=>({'GOIANIA':'D+1','APARECIDA DE GOIANIA':'D+1','SENADOR CANEDO':'D+2','TRINDADE':'D+1','ANAPOLIS':'D+2','HIDROLANDIA':'D+3','GOIANAPOLIS':'D+3','ABADIA DE GOIAS':'D+3','VIANOPOLIS':'CEP não Atendido'}[norm(c)]||'—');
-     const detail=subset(filter.unit,filter.status),filterName=[filter.unit,filter.status&&filter.status!=='ALL'?filter.status:''].filter(Boolean).join(' · ')||'Todos os pedidos desconsiderados';
-     const details=(filter.unit||filter.status)?`<div class="des-detail"><div class="des-detail-head"><div><b>${esc(filterName)}</b><span>${detail.length} pedido(s)</span></div><div class="des-actions"><button class="p" data-ex="des">Exportar Excel</button><button data-des-clear="1">Limpar seleção</button></div></div><div class="sc"><table class="des-orders"><thead><tr><th>Nro. Entrega</th><th>Tipo de Serviço</th><th>Dt. Recebimento Unidade Entrega</th><th>Cidade Pessoa Visita</th><th>Status</th><th>PRAZO</th></tr></thead><tbody>${detail.map(r=>`<tr><td>${esc(r['Nro. Entrega']||'-')}</td><td>${esc(r['Tipo Serviço']||'-')}</td><td>${esc(r.DR||'-')}</td><td>${esc(r['Cidade Pessoa Visita']||'-')}</td><td>${esc(r.Status)}</td><td>${esc(prazoCidade(r['Cidade Pessoa Visita']))}</td></tr>`).join('')||'<tr><td colspan="6">Nenhum pedido encontrado.</td></tr>'}</tbody></table></div></div>`:'';
-     window._ex=window._ex||{};window._ex.des={t:'Desconsiderados_'+today.replaceAll('/','-')+(filter.unit?'_'+filter.unit:'')+(filter.status?'_'+filter.status:''),rows:detail.map(r=>[r['Nro. Entrega']||'',r['Tipo Serviço']||'',r.DR||'',r['Cidade Pessoa Visita']||'',r.Status||'',prazoCidade(r['Cidade Pessoa Visita'])])};
-     $('disregarded').innerHTML=`<div class="des-top"><div><b>Recebidos em ${esc(today)}</b><div class="sub">Somente EM ROTA e LIBERADO PARA ENTREGA, com Dt. Recebimento Unidade Entrega igual a hoje ou “−”. Clique em uma quantidade para ver os pedidos.</div></div><button class="des-total p" data-des-unit="" data-des-status="ALL">${list.length} pedidos</button></div><div class="des-kpis"><button class="des-kpi" data-des-unit="" data-des-status="EM ROTA"><span>Em rota</span><b>${route}</b></button><button class="des-kpi" data-des-unit="" data-des-status="LIBERADO PARA ENTREGA"><span>Liberado para entrega</span><b>${lib}</b></button></div><div class="sc"><table class="des-counts"><thead><tr><th>Unidade</th><th class="center">Em rota</th><th class="center">Liberado</th><th class="center">Total</th></tr></thead><tbody>${unitRows||'<tr><td colspan="4">Nenhum pedido atende aos critérios.</td></tr>'}<tr class="des-total-row"><td><b>Geral</b></td><td class="center"><button class="des-link" data-des-unit="" data-des-status="EM ROTA">${route}</button></td><td class="center"><button class="des-link" data-des-unit="" data-des-status="LIBERADO PARA ENTREGA">${lib}</button></td><td class="center"><button class="des-link" data-des-unit="" data-des-status="ALL">${list.length}</button></td></tr></tbody></table></div>${details}`;
+     const detail=subset(filter.unit,filter.status),DS=window._desSort||(window._desSort={k:'',d:1}),DES_COLS=[['n','Nro. Entrega'],['t','Tipo de Serviço'],['dr','Dt. Recebimento Unidade Entrega'],['c','Cidade Pessoa Visita'],['s','Status'],['p','PRAZO']];
+     const dsv=(r,k)=>k==='n'?String(r['Nro. Entrega']||''):k==='t'?String(r['Tipo Serviço']||''):k==='c'?String(r['Cidade Pessoa Visita']||''):k==='s'?String(r.Status||''):k==='p'?prazoCidade(r['Cidade Pessoa Visita']):(m=>m?m[3]+m[2]+m[1]+(m[4]||'00')+(m[5]||'00'):'')(/^(\d{2})\/(\d{2})\/(\d{4})(?: (\d{2}):(\d{2}))?/.exec(r.DR||''));
+     const detailS=DS.k?[...detail].sort((a,b)=>{const x=dsv(a,DS.k),y=dsv(b,DS.k);if(!x&&y)return 1;if(x&&!y)return -1;return x.localeCompare(y,'pt-BR',{numeric:true})*DS.d}):detail,filterName=[filter.unit,filter.status&&filter.status!=='ALL'?filter.status:''].filter(Boolean).join(' · ')||'Todos os pedidos desconsiderados';
+     const details=(filter.unit||filter.status)?`<div class="des-detail"><div class="des-detail-head"><div><b>${esc(filterName)}</b><span>${detail.length} pedido(s)</span></div><div class="des-actions"><button class="p" data-ex="des">Exportar Excel</button><button data-des-clear="1">Limpar seleção</button></div></div><div class="sc"><table class="des-orders"><thead><tr>${DES_COLS.map(([k,h])=>`<th data-dsk="${k}" title="Clique para ordenar">${h} <span class="dsa">${DS.k===k?(DS.d>0?'▲':'▼'):'↕'}</span></th>`).join('')}</tr></thead><tbody>${detailS.map(r=>`<tr${ext(r)?' class="des-ext" title="Chegou antes de hoje, mas está dentro do prazo da cidade"':''}><td>${esc(r['Nro. Entrega']||'-')}</td><td>${esc(r['Tipo Serviço']||'-')}</td><td>${esc(r.DR||'-')}</td><td>${esc(r['Cidade Pessoa Visita']||'-')}</td><td>${esc(r.Status)}</td><td>${esc(prazoCidade(r['Cidade Pessoa Visita']))}</td></tr>`).join('')||'<tr><td colspan="6">Nenhum pedido encontrado.</td></tr>'}</tbody></table></div></div>`:'';
+     window._ex=window._ex||{};window._ex.des={t:'Desconsiderados_'+today.replaceAll('/','-')+(filter.unit?'_'+filter.unit:'')+(filter.status?'_'+filter.status:''),rows:detailS.map(r=>[r['Nro. Entrega']||'',r['Tipo Serviço']||'',r.DR||'',r['Cidade Pessoa Visita']||'',r.Status||'',prazoCidade(r['Cidade Pessoa Visita']),ext(r)?'Dentro do prazo da cidade':(r.RD?'Recebido hoje':'Sem data')])};
+     $('disregarded').innerHTML=`<div class="des-top"><div><b>Recebidos em ${esc(today)}</b><div class="sub">Somente EM ROTA e LIBERADO PARA ENTREGA, com Dt. Recebimento Unidade Entrega igual a hoje ou “−”, mais as cidades D+2/D+3 que ainda estão dentro do prazo. Clique em uma quantidade para ver os pedidos.</div></div><button class="des-total p" data-des-unit="" data-des-status="ALL">${list.length} pedidos</button></div>${extN?`<div class="des-ext-note"><span class="des-ext-dot"></span><b>${extN}</b> pedido(s) de Senador Canedo, Anápolis (D+2), Hidrolândia, Abadia de Goiás ou Goianápolis (D+3) que chegaram antes de hoje mas ainda estão dentro do prazo, destacados em amarelo na lista.</div>`:''}<div class="des-kpis"><button class="des-kpi" data-des-unit="" data-des-status="EM ROTA"><span>Em rota</span><b>${route}</b></button><button class="des-kpi" data-des-unit="" data-des-status="LIBERADO PARA ENTREGA"><span>Liberado para entrega</span><b>${lib}</b></button></div><div class="sc"><table class="des-counts"><thead><tr><th>Unidade</th><th class="center">Em rota</th><th class="center">Liberado</th><th class="center">Total</th></tr></thead><tbody>${unitRows||'<tr><td colspan="4">Nenhum pedido atende aos critérios.</td></tr>'}<tr class="des-total-row"><td><b>Geral</b></td><td class="center"><button class="des-link" data-des-unit="" data-des-status="EM ROTA">${route}</button></td><td class="center"><button class="des-link" data-des-unit="" data-des-status="LIBERADO PARA ENTREGA">${lib}</button></td><td class="center"><button class="des-link" data-des-unit="" data-des-status="ALL">${list.length}</button></td></tr></tbody></table></div>${details}`;
     }
+
+document.addEventListener('click',e=>{const th=e.target.closest('#disregarded th[data-dsk]');if(!th)return;const k=th.dataset.dsk,D=window._desSort||(window._desSort={k:'',d:1});window._desSort=D.k===k?{k,d:-D.d}:{k,d:1};renderDisregarded();});
     function nsCard(label,list,key){
  const base=NSB(list),ent=base.filter(r=>r.S==='ENTREGUE').length,n=base.length;
  const p=n?ent/n*100:0,c=p>=98.5?'ok':p>=98?'lg':p>=96.99?'yl':'er',bg='t'+c;
